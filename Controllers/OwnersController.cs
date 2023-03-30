@@ -14,13 +14,16 @@ namespace DoGo.Controllers
         private readonly IOwnerRepository _ownerRepo;
         private readonly IDogRepository _dogRepo;
         private readonly IWalkerRepository _walkerRepo;
+        private readonly INeighborhoodRepository _boroRepo;
 
         // ASP.NET will give us an instance of our Owner Repository. This is called "Dependency Injection"
-        public OwnersController(IOwnerRepository OwnerRepository, IDogRepository dogRepository, IWalkerRepository walkerRepository)
+        public OwnersController(IOwnerRepository OwnerRepository, IDogRepository dogRepository, IWalkerRepository walkerRepository, INeighborhoodRepository boroRepo)
         {
             _ownerRepo = OwnerRepository;
             _dogRepo = dogRepository;
             _walkerRepo = walkerRepository;
+            _boroRepo = boroRepo;
+
         }
 
         // GET: OwnersController
@@ -51,7 +54,15 @@ namespace DoGo.Controllers
         // GET: OwnersController/Create
         public ActionResult Create()
         {
-            return View();
+            List<Neighborhood> neighborhoods = _boroRepo.GetAll();
+
+            OwnerFormViewModel vm = new OwnerFormViewModel()
+            {
+                Owner = new Owner(),
+                Neighborhoods = neighborhoods
+            };
+
+            return View(vm);
         }
 
         // POST: OwnersController/Create
@@ -73,13 +84,21 @@ namespace DoGo.Controllers
         // GET: OwnersController1/Edit/5
         public ActionResult Edit(int id)
         {
+            List<Neighborhood> neighborhoods = _boroRepo.GetAll();
             Owner owner = _ownerRepo.GetOwnerById(id);
+
+            OwnerFormViewModel vm = new OwnerFormViewModel()
+            {
+                Owner = owner,
+                Neighborhoods = neighborhoods
+            };
+
             if (owner == null) 
             { 
                 return NotFound();
             };
             
-            return View(owner);
+            return View(vm);
         }
 
         // POST: OwnersController1/Edit/5
