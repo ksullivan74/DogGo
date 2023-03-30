@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System;
 using DogGo.Models.ViewModels;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace DoGo.Controllers
 {
@@ -29,9 +33,19 @@ namespace DoGo.Controllers
         // GET: OwnersController
         public ActionResult Index()
         {
-            List<Owner> owners = _ownerRepo.GetAllOwners();
+            int ownerId = GetCurrentUserId();
+            if (ownerId == 0)
+            {
+                List<Walker> allwalkers = _walkerRepo.GetAllWalkers();
+                return View(allwalkers);
+            }
+            else
+            {
+                Owner owner = _ownerRepo.GetOwnerById(ownerId);
+                List<Walker> boroWalkers = _walkerRepo.GetWalkersInNeighborhood(owner.NeighborhoodId);
+               return View(boroWalkers);
 
-            return View(owners);
+            }
         }
 
         // GET: OwnersController/Details/5
@@ -140,5 +154,60 @@ namespace DoGo.Controllers
                 return View(owner);
             }
         }
+
+        // GET: OwnersController1/Login/5
+        public ActionResult Login()
+        {
+            return View();
+        }
+
+        // POST: OwnersController1/Login/5
+        [HttpPost]
+        public async Task<ActionResult> Login(LoginViewModel viewModel)
+        {
+            Owner owner = _ownerRepo.GetOwnerByEmail(viewModel.Email);
+
+            if (owner == null)
+            {
+                return Unauthorized();
+            }
+
+            List<Claim> claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, owner.Id.ToString()),
+        new Claim(ClaimTypes.Email, owner.Email),
+        new Claim(ClaimTypes.Role, "DogOwner"),
+    };
+
+            ClaimsIdentity claimsIdentity = new ClaimsIdentity(
+                claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity));
+
+            return RedirectToAction("Index", "Dog");
+        }
+
+        public async Task<ActionResult> Logout()
+        {
+            await HttpContext.SignOutAsync();
+            return RedirectToAction("Index", "Home");
+        }
+
+        private int GetCurrentUserId()
+        {
+            string id = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if(id != null)
+            {
+                return int.Parse(id);
+            }
+            else
+            {
+                return 0;
+            }
+            
+        }
+
     }
 }
